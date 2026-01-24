@@ -26,4 +26,9 @@ vim.keymap.set("n", "<C-f>", "<cmd>silent !tmux neww tmux-sessionizer<CR>")
 
 vim.keymap.set("n", "<leader>s", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]])
 
+vim.keymap.set("n", "<leader>e", ":NvimTreeToggle<CR>", {
+	noremap = true,
+	silent = true,
+	desc = "Toggle file explorer",
+})
 return {}
