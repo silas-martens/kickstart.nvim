@@ -920,15 +920,12 @@ require("lazy").setup({
 			})
 		end,
 	},
-
 	{
 		"nickkadutskyi/jb.nvim",
 		lazy = false,
 		priority = 1000,
-		config = function()
-			vim.cmd.colorscheme("default")
-		end,
 	},
+	{ "catppuccin/nvim", name = "catppuccin", priority = 1000 },
 
 	-- Highlight todo, notes, etc in comments
 	{
@@ -1048,6 +1045,10 @@ require("lazy").setup({
 		},
 	},
 })
+
+local theme = require("last-color").recall() or "default"
+vim.cmd.colorscheme(theme)
+
 
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
