@@ -1,0 +1,68 @@
+
+name: Matrix Notifications
+
+on:
+  push:
+  issues:
+    types: [opened, closed, reopened]
+  pull_request:
+    types: [opened, closed, reopened]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Matrix notification
+        env:
+          MATRIX_TOKEN: ${{ secrets.MATRIX_ACCESS_TOKEN }}
+          MATRIX_ROOM: ${{ secrets.MATRIX_ROOM_ID }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_ACTION: ${{ github.event.action }}
+          REPO: ${{ github.repository }}
+          EVENT_URL: ${{ github.event.pull_request.html_url || github.event.issue.html_url || github.event.head_commit.url || github.server_url }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import uuid
+          import urllib.parse
+          import urllib.request
+
+          event = os.environ["EVENT_NAME"]
+          action = os.environ.get("EVENT_ACTION", "")
+          label = f"{event} ({action})" if action else event
+
+          message = (
+              f"GitHub: {label}\n"
+              f"Repository: {os.environ['REPO']}\n"
+              f"{os.environ['EVENT_URL']}"
+          )
+
+          room = urllib.parse.quote(
+              os.environ["MATRIX_ROOM"], safe=""
+          )
+          txn_id = uuid.uuid4().hex
+          url = (
+              "https://matrix.org/_matrix/client/v3/rooms/"
+              f"{room}/send/m.room.message/{txn_id}"
+          )
+
+          payload = json.dumps({
+              "msgtype": "m.text",
+              "body": message
+          }).encode("utf-8")
+
+          request = urllib.request.Request(
+              url,
+              data=payload,
+              method="PUT",
+              headers={
+                  "Authorization": "Bearer " + os.environ["MATRIX_TOKEN"],
+                  "Content-Type": "application/json"
+              }
+          )
+
+          with urllib.request.urlopen(request, timeout=20) as response:
+              print("Matrix response:", response.status)
+          PY
+
