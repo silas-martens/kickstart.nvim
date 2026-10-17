@@ -83,7 +83,12 @@ I hope you enjoy your Neovim journey,
 
 P.S. You can delete this when you're done too. It's your config now! :)
 --]]
+if vim.g.vscode then
+  dofile(vim.fn.stdpath("config") .. "/init-vscode.lua")
+  return
+end
 
+-- normal Neovim config belowd
 -- Set <space> as the leader key
 -- See `:help mapleader`
 --  NOTE: Must happen before plugins are loaded (otherwise wrong leader will be used)
@@ -91,8 +96,9 @@ vim.g.mapleader = ' '
 vim.g.maplocalleader = ' '
 
 -- Set to true if you have a Nerd Font installed and selected in the terminal
-vim.g.have_nerd_font = true 
+vim.g.have_nerd_font = true
 
+vim.opt.termguicolors = true
 -- [[ Setting options ]]
 -- See `:help vim.o`
 -- NOTE: You can change these options as you wish!
@@ -487,7 +493,7 @@ require('lazy').setup({
     -- Main LSP Configuration
     'neovim/nvim-lspconfig',
     dependencies = {
-      -- Automatically install LSPs and related tools to stdpath for Neovim
+      -- Automatically install LSPs and related tools to stdpath:lua print(vim.fn.exepath("cmake-language-server")) for Neovim
       -- Mason must be loaded before its dependents so we need to set it up here.
       -- NOTE: `opts = {}` is the same as calling `require('mason').setup({})`
       {
@@ -604,6 +610,9 @@ require('lazy').setup({
       ---@type table<string, vim.lsp.Config>
       local servers = {
         clangd = {},
+        neocmake = {},
+        texlab = {},
+
         -- gopls = {},
         -- pyright = {},
         -- rust_analyzer = {},
@@ -725,89 +734,74 @@ require('lazy').setup({
         'L3MON4D3/LuaSnip',
         version = '2.*',
         build = (function()
-          -- Build Step is needed for regex support in snippets.
-          -- This step is not supported in many windows environments.
-          -- Remove the below condition to re-enable on windows.
           if vim.fn.has 'win32' == 1 or vim.fn.executable 'make' == 0 then return end
           return 'make install_jsregexp'
         end)(),
         dependencies = {
-          -- `friendly-snippets` contains a variety of premade snippets.
-          --    See the README about individual language/framework/plugin snippets:
-          --    https://github.com/rafamadriz/friendly-snippets
-          -- {
-          --   'rafamadriz/friendly-snippets',
-          --   config = function()
-          --     require('luasnip.loaders.from_vscode').lazy_load()
-          --   end,
-          -- },
+          -- 1. Enable friendly-snippets for standard LaTeX snippets
+          {
+            'rafamadriz/friendly-snippets',
+            config = function() require('luasnip.loaders.from_vscode').lazy_load() end,
+          },
         },
-        opts = {},
+        config = function(_, opts)
+          local ls = require 'luasnip'
+          local s = ls.snippet
+          local i = ls.insert_node
+          local rep = require('luasnip.extras').rep
+          local fmta = require('luasnip.extras.fmt').fmta
+
+          ls.add_snippets('tex', {
+            -- Universal Environment Snippet
+            s(
+              { trig = 'env', snippetType = 'snippet', dscr = 'Begin and end an arbitrary environment' },
+              fmta(
+                [[
+        \begin{<>}
+            <>
+        \end{<>}
+        ]],
+                {
+                  i(1, 'environment'), -- Placeholder 1 (Environment Name)
+                  i(2), -- Placeholder 2 (Content)
+                  rep(1), -- Auto-repeats Placeholder 1 at \end{}
+                }
+              )
+            ),
+          })
+        end,
       },
     },
     ---@module 'blink.cmp'
     ---@type blink.cmp.Config
     opts = {
       keymap = {
-        -- 'default' (recommended) for mappings similar to built-in completions
-        --   <c-y> to accept ([y]es) the completion.
-        --    This will auto-import if your LSP supports it.
-        --    This will expand snippets if the LSP sent a snippet.
-        -- 'super-tab' for tab to accept
-        -- 'enter' for enter to accept
-        -- 'none' for no mappings
-        --
-        -- For an understanding of why the 'default' preset is recommended,
-        -- you will need to read `:help ins-completion`
-        --
-        -- No, but seriously. Please read `:help ins-completion`, it is really good!
-        --
-        -- All presets have the following mappings:
-        -- <tab>/<s-tab>: move to right/left of your snippet expansion
-        -- <c-space>: Open menu or open docs if already open
-        -- <c-n>/<c-p> or <up>/<down>: Select next/previous item
-        -- <c-e>: Hide menu
-        -- <c-k>: Toggle signature help
-        --
-        -- See :h blink-cmp-config-keymap for defining your own keymap
-        preset = 'enter',
-
-        -- For more advanced Luasnip keymaps (e.g. selecting choice nodes, expansion) see:
-        --    https://github.com/L3MON4D3/LuaSnip?tab=readme-ov-file#keymaps
+        preset = 'enter', -- Press Enter to accept completion & expand snippet
       },
 
       appearance = {
-        -- 'mono' (default) for 'Nerd Font Mono' or 'normal' for 'Nerd Font'
-        -- Adjusts spacing to ensure icons are aligned
         nerd_font_variant = 'mono',
       },
 
       completion = {
-        -- By default, you may press `<c-space>` to show the documentation.
-        -- Optionally, set `auto_show = true` to show the documentation after a delay.
         documentation = { auto_show = false, auto_show_delay_ms = 500 },
+        -- Ensure fuzzy completion starts matching even when typing leading backslashes
+        keyword = { range = 'full' },
       },
 
       sources = {
-        default = { 'lsp', 'path', 'snippets' },
+        -- Include snippets along with LSP, Path, and Buffer
+        default = { 'lsp', 'path', 'snippets', 'buffer' },
       },
 
+      -- Tell Blink to use LuaSnip for snippet expansions
       snippets = { preset = 'luasnip' },
 
-      -- Blink.cmp includes an optional, recommended rust fuzzy matcher,
-      -- which automatically downloads a prebuilt binary when enabled.
-      --
-      -- By default, we use the Lua implementation instead, but you may enable
-      -- the rust implementation via `'prefer_rust_with_warning'`
-      --
-      -- See :h blink-cmp-config-fuzzy for more information
       fuzzy = { implementation = 'lua' },
 
-      -- Shows a signature help window while you type arguments for a function
       signature = { enabled = true },
     },
   },
-
   { -- You can easily change to a different colorscheme.
     -- Change the name of the colorscheme plugin below, and then
     -- change the command in the config to whatever the name of that colorscheme is.
@@ -953,15 +947,15 @@ require('lazy').setup({
   -- require 'kickstart.plugins.debug',
   require 'kickstart.plugins.indent_line',
   -- require 'kickstart.plugins.lint',
-require 'kickstart.plugins.autopairs',
-  -- require 'kickstart.plugins.neo-tree',
+  require 'kickstart.plugins.autopairs',
+  require 'kickstart.plugins.neo-tree',
   -- require 'kickstart.plugins.gitsigns', -- adds gitsigns recommended keymaps
 
   -- NOTE: The import below can automatically add your own plugins, configuration, etc from `lua/custom/plugins/*.lua`
   --    This is the easiest way to modularize your config.
   --
   --  Uncomment the following line and add your plugins to `lua/custom/plugins/*.lua` to get going.
-{ import = 'custom.plugins' },
+  { import = 'custom.plugins' },
   --
   -- For additional information with loading, sourcing and examples see `:help lazy.nvim-🔌-plugin-spec`
   -- Or use telescope!
@@ -989,7 +983,45 @@ require 'kickstart.plugins.autopairs',
   },
 })
 
-local theme = require("last-color").recall() or "default"
+local theme = require('last-color').recall() or 'default'
 vim.cmd.colorscheme(theme)
+--local transparent_groups = {
+--  "Normal",
+--  "NormalNC",
+--  "NormalFloat",
+--  "FloatBorder",
+--  "FloatTitle",
+--  "SignColumn",
+--  "LineNr",
+--  "CursorLineNr",
+--  "EndOfBuffer",
+--  "FoldColumn",
+--  "StatusLine",
+--  "StatusLineNC",
+--  "TabLine",
+--  "TabLineFill",
+--  "WinSeparator",
+--  "Pmenu",
+--  "PmenuSel",
+--  "PmenuSbar",
+--  "PmenuThumb",
+--  "TelescopeNormal",
+--  "TelescopeBorder",
+--  "TelescopePromptNormal",
+--  "TelescopePromptBorder",
+--  "TelescopeResultsNormal",
+--  "TelescopeResultsBorder",
+--  "TelescopePreviewNormal",
+--  "TelescopePreviewBorder",
+--}
+--
+--for _, group in ipairs(transparent_groups) do
+--  vim.api.nvim_set_hl(0, group, { bg = "NONE" })
+--end
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
+--
+vim.cmd [[
+  highlight Normal guibg=NONE ctermbg=NONE
+  highlight NormalNC guibg=NONE ctermbg=NONE
+]]
