@@ -26,7 +26,7 @@ vim.keymap.set("n", "<C-f>", "<cmd>silent !tmux neww tmux-sessionizer<CR>")
 
 vim.keymap.set("n", "<leader>s", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]])
 
-vim.keymap.set("n", "<leader>e", ":NvimTreeToggle<CR>", {
+vim.keymap.set("n", "<leader>e", ":Neotree toggle<CR>", {
 	noremap = true,
 	silent = true,
 	desc = "Toggle file explorer",
@@ -38,6 +38,9 @@ vim.keymap.set("n", "<leader>h", "<cmd>LspClangdSwitchSourceHeader<CR>", { desc 
 -- Diagnostic keymaps
 vim.keymap.set("n", "<leader>q", vim.diagnostic.setloclist, { desc = "Open diagnostic [Q]uickfix list" })
 
+vim.keymap.set("n", "<leader>T", "<cmd>terminal<CR>", {
+  desc = "Open terminal",
+})
 return {}
 
 
